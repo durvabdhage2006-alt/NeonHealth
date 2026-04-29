@@ -1,0 +1,226 @@
+/* App.css */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&family=Playfair+Display:wght@700&display=swap');
+
+:root {
+  --primary-gold: #FFD700;
+  --gold-glow: rgba(255, 215, 0, 0.4);
+  --deep-bg: #050505;
+  --secondary-bg: #111111;
+  --ribbon-red: #cc0033;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--deep-bg);
+  color: #fff;
+  overflow: hidden;
+}
+
+.grand-opening-container {
+  min-height: 100vh;
+  width: 100vw;
+  background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.ceremony-header {
+  margin-top: 5vh;
+  text-align: center;
+  z-index: 10;
+  animation: fadeInDown 1.5s ease-out;
+}
+
+.title {
+  font-family: 'Playfair Display', serif;
+  font-size: 3.5rem;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(to bottom, #fff, #aaa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  font-weight: 300;
+  color: var(--primary-gold);
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  opacity: 0.8;
+}
+
+.ceremony-stage {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* Ribbon System */
+.ribbon-system {
+  width: 100%;
+  height: 60px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 5;
+}
+
+.ribbon-half {
+  flex: 1;
+  height: 40px;
+  background: linear-gradient(to bottom, #d40030, #990022, #d40030);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  position: relative;
+  transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+  border-top: 2px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+.ribbon-half.left {
+  transform-origin: left;
+}
+
+.ribbon-half.right {
+  transform-origin: right;
+}
+
+.ribbon-half.left.cut {
+  transform: rotate(-15deg) translate(-110%, -50px);
+  opacity: 0;
+}
+
+.ribbon-half.right.cut {
+  transform: rotate(15deg) translate(110%, -50px);
+  opacity: 0;
+}
+
+.ribbon-knot-anchor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  width: 10px;
+  height: 10px;
+}
+
+.knot {
+  width: 60px;
+  height: 80px;
+  background: radial-gradient(circle at center, #ff1a4d, #990022);
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulseKnot 2s infinite alternate;
+}
+
+.action-zone {
+  margin-top: 200px;
+  z-index: 20;
+}
+
+.cut-button {
+  background: transparent;
+  border: 1px solid var(--primary-gold);
+  padding: 18px 45px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--primary-gold);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.4s ease;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.cut-button:hover {
+  background: var(--primary-gold);
+  color: #000;
+  box-shadow: 0 0 40px var(--gold-glow);
+  transform: translateY(-5px);
+}
+
+.button-glow {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 215, 0, 0.4),
+    transparent
+  );
+  transition: 0.5s;
+}
+
+.cut-button:hover .button-glow {
+  left: 100%;
+}
+
+.reset-button {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px 25px;
+  color: #888;
+  cursor: pointer;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  transition: 0.3s;
+}
+
+.reset-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.footer {
+  margin-bottom: 2vh;
+  font-size: 0.8rem;
+  color: #444;
+  letter-spacing: 2px;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseKnot {
+  from {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.6);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1.05);
+    box-shadow: 0 8px 30px rgba(255, 26, 77, 0.4);
+  }
+}
