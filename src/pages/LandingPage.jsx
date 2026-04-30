@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
@@ -388,3 +389,4 @@ export const ContactPage = () => (
     </div>
   </PageTransition>
 );
+

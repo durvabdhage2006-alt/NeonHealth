@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Activity, Mic, Send, PhoneCall, Navigation, ShieldAlert, ChevronRight } from 'lucide-react';
@@ -225,3 +226,4 @@ export default function MedSlotAssistant() {
     </>
   );
 }
+

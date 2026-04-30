@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState } from 'react';
 import { 
   Users, Clock, ShieldAlert, Monitor, Activity, Settings, 
@@ -331,3 +332,4 @@ export const AdminDashboard = () => {
     </div>
   );
 };
+

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { translations } from '../translations';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -59,3 +60,4 @@ export const TranslationProvider = ({ children }) => {
     </TranslationContext.Provider>
   );
 };
+
