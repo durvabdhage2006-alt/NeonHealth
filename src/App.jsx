@@ -1,354 +1,479 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Activity, 
-  Users, 
-  Clock, 
-  TrendingUp, 
-  Stethoscope, 
-  Bell, 
-  ChevronRight,
-  ArrowRight,
-  MapPin,
-  CheckCircle2,
-  AlertCircle,
-  Building2,
-  Phone
+  Activity, Users, Clock, ArrowRight, ShieldAlert, Monitor, 
+  HeartPulse, Building, MapPin, Smartphone, CheckCircle, 
+  Stethoscope, BarChart3, BellRing, X, Lock, Mail
 } from 'lucide-react';
-import ThreeScene from './components/ThreeScene';
+import { ref, onValue } from 'firebase/database';
+import { db } from './firebase';
 import './MedSlot.css';
 
-// Doctor Images from Artifacts
-import drEmily from './assets/dr_emily_chen_1777454324348.png';
-import drMarcus from './assets/dr_marcus_wright_1777454339238.png';
-import drSarah from './assets/dr_sarah_johnson_realistic_1777454357857.png';
+// Assets
+import imgReception from './assets/hospital_reception.png';
+import bgHospital from './assets/modern_hospital_bg.png';
 
-const Navbar = () => (
-  <motion.nav 
-    initial={{ y: -100 }}
-    animate={{ y: 0 }}
-    className="navbar"
+const FadeIn = ({ children, delay = 0 }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: "-100px" }}
+    transition={{ duration: 0.6, delay }}
   >
-    <div className="nav-logo">
-      <Activity size={32} strokeWidth={3} />
-      <span style={{ fontFamily: 'Poppins', letterSpacing: '-1px' }}>MedSlot</span>
+    {children}
+  </motion.div>
+);
+
+const Navbar = ({ setShowLogin, isLoggedIn, setIsLoggedIn }) => (
+  <nav className="navbar">
+    <div className="nav-logo" style={{ cursor: 'pointer' }}>
+      <Activity size={28} strokeWidth={3} />
+      <span>NexusHealth</span>
     </div>
     <ul className="nav-links">
       <li><a href="#home">Home</a></li>
-      <li><a href="#queue">Live Queue</a></li>
-      <li><a href="#doctors">Doctors</a></li>
-      <li><a href="#emergency" style={{ color: '#ff4d4d' }}>Emergency</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#live-queue">Queue Status</a></li>
+      <li><a href="#hospitals">Hospitals</a></li>
+      <li><a href="#how-it-works">How it Works</a></li>
+      <li><a href="#features">Features</a></li>
     </ul>
-  </motion.nav>
+    {isLoggedIn ? (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: 'var(--primary-teal)' }}>
+          <div style={{ width: '36px', height: '36px', background: 'var(--primary-light)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users size={18} />
+          </div>
+          John Doe
+        </div>
+        <button onClick={() => setIsLoggedIn(false)} className="btn btn-outline" style={{ padding: '0.5rem 1rem' }}>Logout</button>
+      </div>
+    ) : (
+      <button className="btn btn-secondary" onClick={() => setShowLogin(true)}>Login</button>
+    )}
+  </nav>
 );
 
-const Hero = () => {
-  const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 500], [0, 250]);
-  const opacity = useTransform(scrollY, [0, 400], [1, 0]);
+const LoginModal = ({ show, onClose, onLogin }) => {
+  const [role, setRole] = useState('patient');
+  
+  if (!show) return null;
   
   return (
-    <section id="home" className="hero">
-      <ThreeScene />
+    <AnimatePresence>
       <motion.div 
-        style={{ y: y1, opacity }}
-        initial={{ opacity: 0, scale: 0.9, y: 50 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 1.2, cubicBezier: [0.16, 1, 0.3, 1] }}
-        className="hero-content glass-panel glow-border"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        style={{ position: 'fixed', inset: 0, zIndex: 4000, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
-        <h1 className="hero-title">MedSlot</h1>
-        <p className="hero-subtitle">Skip the Queue. Experience Smart Healthcare.</p>
-        <div className="cta-group">
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="btn btn-primary"
-          >
-            Book Appointment
-          </motion.button>
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="btn btn-accent"
-          >
-            View Live Queue
-          </motion.button>
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="btn btn-secondary"
-            style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
-          >
-            Doctor Portal Login <ArrowRight size={20} />
-          </motion.button>
-        </div>
-      </motion.div>
-    </section>
-  );
-};
-
-const SectionHeader = ({ title, subtitle }) => (
-  <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-    <h2 className="section-title">{title}</h2>
-    <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginTop: '-3rem' }}>{subtitle}</p>
-  </div>
-);
-
-const LiveQueueFlow = () => {
-  const [activeStep, setActiveStep] = useState(1);
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveStep(prev => (prev % 3) + 1);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const steps = [
-    { id: 1, label: 'Waiting', icon: <Clock /> },
-    { id: 2, label: 'In Progress', icon: <Activity /> },
-    { id: 3, label: 'Done', icon: <CheckCircle2 /> }
-  ];
-
-  return (
-    <section id="queue" className="section-container">
-      <SectionHeader title="Live Queue Control" subtitle="AI tracking tokens moving from waiting area to doctor cabin" />
-      <div className="glass-panel glow-border" style={{ padding: '4rem', background: 'rgba(15,23,42,0.6)' }}>
-        <div className="queue-flow">
-          <div className="queue-line"></div>
-          <motion.div 
-            className="queue-progress"
-            animate={{ width: `${(activeStep - 1) * 40 + 10}%` }}
-            transition={{ duration: 0.8, ease: "easeInOut" }}
-          />
-          {steps.map((step) => (
-            <div key={step.id} style={{ textAlign: 'center', zIndex: 4 }}>
-              <motion.div 
-                className={`queue-node ${activeStep === step.id ? 'active' : ''}`}
-                animate={activeStep === step.id ? { scale: [1, 1.2, 1] } : {}}
-                transition={{ repeat: Infinity, duration: 1.5 }}
-              >
-                {step.icon}
-              </motion.div>
-              <p style={{ marginTop: '1.5rem', fontWeight: '800', color: activeStep === step.id ? 'var(--primary-cyan)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                {step.label}
-              </p>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: '4rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '1.5rem', color: 'var(--text-main)', fontWeight: '700' }}>
-            Currently Processing: <strong style={{ color: 'var(--primary-purple)', fontSize: '2rem', textShadow: '0 0 20px rgba(181, 60, 255, 0.5)' }}>Token A2{activeStep + 2}</strong>
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const DoctorSection = () => {
-  const doctors = [
-    { name: 'Dr. Emily Chen', specialty: 'Cardiology Head', queue: 12, image: drEmily, status: 'Active' },
-    { name: 'Dr. Marcus Wright', specialty: 'Neurology Lead', queue: 8, image: drMarcus, status: 'Active' },
-    { name: 'Dr. Sarah Johnson', specialty: 'Chief Pediatrician', queue: 5, image: drSarah, status: 'Break' }
-  ];
-
-  return (
-    <section id="doctors" className="section-container">
-      <SectionHeader title="Smart Doctor Dashboard" subtitle="Live availability and queue status for top specialists" />
-      <div className="grid-3">
-        {doctors.map((dr, i) => (
-          <motion.div 
-            key={i}
-            whileHover={{ scale: 1.05, y: -15 }}
-            className="glass-panel doctor-card glow-border"
-            style={{ overflow: 'hidden', padding: 0 }}
-          >
-            <div style={{ height: '350px', width: '100%', position: 'relative' }}>
-              <img src={dr.image} alt={dr.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0f172a, transparent)' }}></div>
-              <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', right: '2rem' }}>
-                 <h3 style={{ fontSize: '1.8rem', fontWeight: '900', color: 'white', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{dr.name}</h3>
-                 <p style={{ color: 'var(--primary-cyan)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', fontSize: '0.9rem' }}>{dr.specialty}</p>
-              </div>
-            </div>
-            <div style={{ padding: '2rem', background: 'rgba(0,0,0,0.2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '1rem', color: 'var(--text-main)', fontWeight: '600' }}>Patients Waiting: <strong style={{ color: 'var(--primary-green)', fontSize: '1.2rem' }}>{dr.queue}</strong></span>
-                <div className="status-pulse" style={{ background: dr.status === 'Active' ? '#00ff88' : '#ff4d4d' }}></div>
-              </div>
-              <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', padding: '0.8rem', fontSize: '0.9rem' }}>Join Queue <ArrowRight size={16} /></button>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </section>
-  );
-};
-
-const PatientExperience = () => (
-  <section className="section-container" style={{ position: 'relative' }}>
-    <div className="glass-panel glow-border" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', padding: '5rem', gap: '5rem', background: 'var(--gradient-bg)' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <h2 style={{ fontSize: '3.5rem', fontWeight: '900', marginBottom: '2rem', letterSpacing: '-1.5px', background: 'linear-gradient(135deg, #ffffff 0%, #b53cff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Patient Comfort Experience</h2>
-        <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', lineHeight: '1.8', marginBottom: '3rem' }}>
-          Relax in the cafeteria or take a walk. MedSlot's intelligent system tracks your position and sends dynamic alerts exactly when you need to start moving toward the doctor's cabin.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {[
-            { icon: <Phone size={30} />, text: 'Real-time Push Alerts' },
-            { icon: <MapPin size={30} />, text: 'Indoor Navigation Guide' },
-            { icon: <Clock size={30} />, text: 'Live Delay Adjustment' }
-          ].map((item, i) => (
-            <motion.div key={i} whileHover={{ x: 15 }} style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', fontWeight: '700', fontSize: '1.1rem', background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '20px' }}>
-              <div style={{ color: 'var(--primary-cyan)', filter: 'drop-shadow(0 0 10px rgba(0,212,255,0.5))' }}>{item.icon}</div>
-              <span style={{ color: 'white' }}>{item.text}</span>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-        {/* Floating background elements */}
-        <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} style={{ position: 'absolute', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(181,60,255,0.2) 0%, transparent 70%)', zIndex: 0 }} />
-        
         <motion.div 
-           animate={{ y: [0, -25, 0] }}
-           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-           className="glass-panel"
-           style={{ width: '320px', height: '600px', background: 'rgba(15,23,42,0.8)', padding: '2rem', display: 'flex', flexDirection: 'column', zIndex: 1, border: '2px solid rgba(0,255,136,0.3)', boxShadow: '0 30px 60px rgba(0,255,136,0.2)' }}
+          initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+          className="card" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem', position: 'relative' }}
         >
-          <div style={{ width: '60px', height: '6px', background: 'rgba(255,255,255,0.2)', margin: '0 auto 2rem', borderRadius: '10px' }}></div>
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 1, type: 'spring' }}
-            className="glass-panel glow-border" 
-            style={{ background: 'var(--gradient-vibrant)', color: '#0f172a', padding: '2rem', borderRadius: '20px', marginBottom: '2rem' }}>
-             <Bell size={32} style={{ marginBottom: '1rem' }} />
-             <h4 style={{ fontSize: '1.5rem', fontWeight: '900', marginBottom: '0.5rem' }}>Your Turn in 5 mins</h4>
-             <p style={{ fontSize: '0.9rem', fontWeight: '600' }}>Please proceed to Room 402. Dr. Emily Chen is finishing up.</p>
-          </motion.div>
-          <div style={{ flex: 1, background: 'rgba(255,255,255,0.05)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-             <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-               <Activity size={100} color="var(--primary-cyan)" />
-             </motion.div>
+          <button onClick={onClose} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <X size={24} />
+          </button>
+          
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div className="icon-box icon-teal" style={{ margin: '0 auto 1rem' }}><Lock size={24} /></div>
+            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 800 }}>Welcome Back</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Securely login to your NexusHealth account.</p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: 'var(--bg-main)', padding: '0.35rem', borderRadius: '8px' }}>
+            <button 
+              onClick={() => setRole('patient')}
+              style={{ flex: 1, padding: '0.5rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: '0.2s', background: role === 'patient' ? 'white' : 'transparent', color: role === 'patient' ? 'var(--primary-teal)' : 'var(--text-muted)', boxShadow: role === 'patient' ? 'var(--shadow-sm)' : 'none' }}
+            >Patient</button>
+            <button 
+              onClick={() => setRole('staff')}
+              style={{ flex: 1, padding: '0.5rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: '0.2s', background: role === 'staff' ? 'white' : 'transparent', color: role === 'staff' ? 'var(--primary-teal)' : 'var(--text-muted)', boxShadow: role === 'staff' ? 'var(--shadow-sm)' : 'none' }}
+            >Hospital Staff</button>
+            <button 
+              onClick={() => setRole('admin')}
+              style={{ flex: 1, padding: '0.5rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: '0.2s', background: role === 'admin' ? 'white' : 'transparent', color: role === 'admin' ? 'var(--primary-teal)' : 'var(--text-muted)', boxShadow: role === 'admin' ? 'var(--shadow-sm)' : 'none' }}
+            >Admin</button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Email Address</label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input type="email" placeholder="name@example.com" style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem', borderRadius: '8px', border: '1px solid var(--border-light)', fontSize: '0.95rem', outline: 'none' }} />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Password</label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input type="password" placeholder="••••••••" style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.5rem', borderRadius: '8px', border: '1px solid var(--border-light)', fontSize: '0.95rem', outline: 'none' }} />
+              </div>
+            </div>
+          </div>
+
+          <button onClick={() => { onLogin(); onClose(); }} className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }}>
+            Sign In
+          </button>
+          
+          <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            Don't have an account? <a href="#" style={{ color: 'var(--primary-teal)', fontWeight: 600, textDecoration: 'none' }}>Sign up</a>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+const Hero = () => (
+  <section id="home" className="hero">
+    <img src={bgHospital} alt="Hospital Background" className="hero-background" />
+    <div className="hero-overlay"></div>
+    
+    <div className="hero-content">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+         <div className="status-indicator status-green" style={{ marginBottom: '1.5rem' }}>
+            <span className="dot dot-green"></span> Available in 50+ Hospitals
+         </div>
+         <h1>Smart Hospital Queue Management System</h1>
+         <p>
+           Reduce waiting time, manage patient flow, and improve hospital service efficiency with our predictive AI-powered queue management SaaS.
+         </p>
+         <div style={{ display: 'flex', gap: '1rem' }}>
+           <button className="btn btn-primary">
+             Join Queue <ArrowRight size={18} />
+           </button>
+           <button className="btn btn-secondary">
+             Book Appointment
+           </button>
+         </div>
+      </motion.div>
     </div>
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
+      className="hero-image-container"
+    >
+      <img src={imgReception} alt="Hospital Reception" />
+    </motion.div>
   </section>
 );
 
-const AIInsights = () => (
-  <section id="ai" className="section-container">
-    <SectionHeader title="AI Crowd Prediction" subtitle="Interactive holographic projection of hospital capacity" />
-    <div className="grid-3">
-      <div className="glass-panel info-card glow-border" style={{ gridColumn: 'span 2', minHeight: '400px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '2rem', fontWeight: '800', background: 'linear-gradient(90deg, #00d4ff, #b53cff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Live Traffic Heatmap</h3>
-          <span style={{ padding: '0.5rem 1rem', background: 'rgba(0, 255, 136, 0.2)', color: '#00ff88', borderRadius: '20px', fontWeight: 'bold' }}>● LIVE</span>
-        </div>
-        <div style={{ flex: 1, position: 'relative', marginTop: '2rem' }}>
-          <svg width="100%" height="100%" viewBox="0 0 800 300" style={{ filter: 'drop-shadow(0 0 20px rgba(0, 212, 255, 0.4))' }}>
-            <defs>
-              <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#00ff88" />
-                <stop offset="50%" stopColor="#00d4ff" />
-                <stop offset="100%" stopColor="#b53cff" />
-              </linearGradient>
-            </defs>
-            <motion.path
-              d="M0,250 Q150,100 300,200 T600,80 T800,150"
-              fill="none"
-              stroke="url(#glowGrad)"
-              strokeWidth="8"
-              strokeLinecap="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 4, repeat: Infinity, repeatType: 'reverse', ease: "easeInOut" }}
-            />
-            {/* Animated data points */}
-            {[300, 600].map((x, i) => (
-              <motion.circle 
-                key={i} cx={x} cy={i === 0 ? 200 : 80} r="8" fill="#fff" 
-                animate={{ r: [8, 15, 8] }} transition={{ duration: 2, repeat: Infinity }} 
-              />
-            ))}
-          </svg>
-        </div>
+const AboutSection = () => (
+  <section id="about" className="section section-alt">
+    <FadeIn>
+      <div className="section-header">
+        <h2>About Our Hospital System</h2>
+        <p>A complete digital transformation of OPD flow and waiting room management.</p>
       </div>
-      <div className="glass-panel info-card" style={{ background: 'var(--gradient-vibrant)', color: '#0f172a', display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+      <div className="grid-2" style={{ alignItems: 'center' }}>
         <div>
-          <TrendingUp size={64} style={{ margin: '0 auto 1.5rem', color: '#0f172a' }} />
-          <h4 style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '1rem' }}>+45%</h4>
-          <p style={{ fontSize: '1.2rem', fontWeight: '700' }}>Increased Efficiency</p>
-          <p style={{ marginTop: '1rem', opacity: 0.8, fontWeight: '600' }}>AI dynamically routes patients to minimize waiting time.</p>
+          <h3 style={{ fontSize: '1.8rem', marginBottom: '1rem', color: 'var(--text-main)' }}>Revolutionizing Patient Experience</h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
+            NexusHealth eliminates the chaos of crowded hospital waiting rooms. Our intelligent SaaS platform dynamically manages patient queues, predictive appointments, and emergency overrides in real-time.
+          </p>
+          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+             {[
+               "Reduces average patient waiting time by up to 60%.",
+               "Streamlines OPD flow for doctors and receptionists.",
+               "Prioritizes emergency cases automatically.",
+               "Seamless appointment integration with walk-in queues."
+             ].map((item, i) => (
+               <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', color: 'var(--text-main)', fontWeight: 500 }}>
+                 <CheckCircle size={20} color="var(--primary-teal)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                 {item}
+               </li>
+             ))}
+          </ul>
+        </div>
+        <div className="card" style={{ background: 'var(--bg-main)', border: 'none' }}>
+           <div className="grid-2" style={{ gap: '1rem' }}>
+             <div className="card" style={{ padding: '1.5rem', textAlign: 'center' }}>
+                <h4 style={{ fontSize: '2.5rem', color: 'var(--primary-blue)', marginBottom: '0.5rem' }}>2M+</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600 }}>Patients Served</p>
+             </div>
+             <div className="card" style={{ padding: '1.5rem', textAlign: 'center' }}>
+                <h4 style={{ fontSize: '2.5rem', color: 'var(--primary-teal)', marginBottom: '0.5rem' }}>15m</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600 }}>Avg Wait Time</p>
+             </div>
+             <div className="card" style={{ padding: '1.5rem', textAlign: 'center', gridColumn: 'span 2' }}>
+                <h4 style={{ fontSize: '2.5rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>99.9%</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600 }}>System Uptime & Reliability</p>
+             </div>
+           </div>
         </div>
       </div>
-    </div>
+    </FadeIn>
   </section>
 );
+
+const LiveQueueSection = () => {
+  const defaultDepts = [
+    { id: 'opd', name: "General OPD", token: "G-102", wait: "5m", dr: "Dr. Smith", status: "online", icon: Users, color: "blue" },
+    { id: 'cardiology', name: "Cardiology", token: "C-42", wait: "12m", dr: "Dr. Johnson", status: "online", icon: HeartPulse, color: "teal" },
+    { id: 'orthopedic', name: "Orthopedic", token: "O-18", wait: "25m", dr: "Dr. Chen", status: "busy", icon: Activity, color: "orange" },
+    { id: 'pediatrics', name: "Pediatrics", token: "P-89", wait: "10m", dr: "Dr. Davis", status: "online", icon: Building, color: "blue" },
+    { id: 'emergency', name: "Emergency", token: "ER-04", wait: "Immediate", dr: "Duty Doctor", status: "busy", icon: ShieldAlert, color: "red" },
+  ];
+
+  const [depts, setDepts] = useState(defaultDepts);
+
+  useEffect(() => {
+    const queueRef = ref(db, 'hospital/queues');
+    const unsubscribe = onValue(queueRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Map firebase data over the default layout to keep icons and colors
+        const updatedDepts = defaultDepts.map(dept => {
+          if (data[dept.id]) {
+            return { ...dept, ...data[dept.id] };
+          }
+          return dept;
+        });
+        setDepts(updatedDepts);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <section id="live-queue" className="section">
+      <FadeIn>
+        <div className="section-header">
+          <h2>Live Queue Status</h2>
+          <p>Real-time updates from across the hospital departments.</p>
+        </div>
+        <div className="grid-3">
+          {depts.map((d, i) => (
+            <div key={i} className="card" style={d.name === 'Emergency' ? { border: '2px solid var(--danger-red)' } : {}}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontWeight: 700, fontSize: '1.1rem' }}>
+                  <div className={`icon-box icon-${d.color}`} style={{ width: '40px', height: '40px', marginBottom: 0 }}>
+                    <d.icon size={20} />
+                  </div>
+                  {d.name}
+                </div>
+                <span className={`status-indicator status-${d.name === 'Emergency' ? 'red' : 'green'}`}>
+                  <span className={`dot dot-${d.name === 'Emergency' ? 'red' : 'green'}`}></span> Active
+                </span>
+              </div>
+              
+              <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', textAlign: 'center' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.5rem' }}>CURRENT TOKEN</div>
+                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: d.name === 'Emergency' ? 'var(--danger-red)' : 'var(--text-main)' }}>{d.token}</div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
+                 <div style={{ color: 'var(--text-muted)' }}>
+                   Wait Time: <strong style={{ color: 'var(--text-main)' }}>{d.wait}</strong>
+                 </div>
+                 <div style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                   <span className={`dot dot-${d.status === 'online' ? 'green' : 'yellow'}`}></span> {d.dr}
+                 </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </FadeIn>
+    </section>
+  );
+};
+
+const NearbyHospitalsSection = () => (
+  <section id="hospitals" className="section section-alt">
+    <FadeIn>
+      <div className="section-header">
+        <h2>See Nearby Hospitals</h2>
+        <p>Find facilities near you, check their live crowds, and join the queue remotely.</p>
+      </div>
+      <div className="grid-3">
+        {[
+          { name: "Apollo City Hospital", dist: "2.4 km", crowd: "Moderate", wait: "15-20m", depts: "Cardiology, Ortho, Gen..." },
+          { name: "Fortis Healthcare", dist: "5.1 km", crowd: "High", wait: "45-60m", depts: "Neurology, Pediatrics..." },
+          { name: "Nexus Regional Clinic", dist: "1.2 km", crowd: "Low", wait: "5-10m", depts: "General, Dental, ENT..." }
+        ].map((h, i) => (
+          <div key={i} className="card">
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{h.name}</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              <MapPin size={16} color="var(--primary-teal)" /> {h.dist} away
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Crowd Level</span>
+                <span style={{ fontWeight: 600 }}>{h.crowd}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Avg Wait Time</span>
+                <span style={{ fontWeight: 600 }}>{h.wait}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Departments</span>
+                <span style={{ fontWeight: 600 }}>{h.depts}</span>
+              </div>
+            </div>
+            <button className="btn btn-outline" style={{ width: '100%' }}>View Queue</button>
+          </div>
+        ))}
+      </div>
+    </FadeIn>
+  </section>
+);
+
+const HowItWorksSection = () => (
+  <section id="how-it-works" className="section">
+    <FadeIn>
+      <div className="section-header">
+        <h2>How It Works</h2>
+        <p>Four simple steps to a seamless healthcare experience.</p>
+      </div>
+      <div className="grid-4">
+        <div className="card step-card">
+           <div className="step-number">1</div>
+           <div className="icon-box icon-teal" style={{ margin: '0 auto 1rem' }}><Building size={24} /></div>
+           <h4 style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>Select Hospital</h4>
+           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Choose a nearby facility and select the required department.</p>
+        </div>
+        <div className="card step-card">
+           <div className="step-number">2</div>
+           <div className="icon-box icon-blue" style={{ margin: '0 auto 1rem' }}><Smartphone size={24} /></div>
+           <h4 style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>Join Queue</h4>
+           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Book an appointment or join the live digital walk-in queue.</p>
+        </div>
+        <div className="card step-card">
+           <div className="step-number">3</div>
+           <div className="icon-box icon-orange" style={{ margin: '0 auto 1rem' }}><Clock size={24} /></div>
+           <h4 style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>Get Token & Time</h4>
+           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Receive a digital token with an AI-predicted accurate wait time.</p>
+        </div>
+        <div className="card step-card">
+           <div className="step-number">4</div>
+           <div className="icon-box icon-teal" style={{ margin: '0 auto 1rem' }}><Stethoscope size={24} /></div>
+           <h4 style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>Visit Hospital</h4>
+           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Arrive just in time for your turn, eliminating waiting room crowds.</p>
+        </div>
+      </div>
+    </FadeIn>
+  </section>
+);
+
+const FeaturesSection = () => {
+  const features = [
+    { title: "AI Wait Prediction", desc: "Machine learning algorithms calculate exact times based on doctor speeds.", icon: Clock, color: "blue" },
+    { title: "Emergency Priority", desc: "Instantly pause normal queues when critical cases arrive at the ER.", icon: ShieldAlert, color: "red" },
+    { title: "QR Check-in", desc: "Self-service kiosk and mobile check-ins via secure QR codes.", icon: Monitor, color: "teal" },
+    { title: "Doctor Availability", desc: "Real-time tracking of when doctors are consulting, on rounds, or on break.", icon: Stethoscope, color: "orange" },
+    { title: "SMS/WhatsApp Alerts", desc: "Patients receive automated push notifications when their turn approaches.", icon: BellRing, color: "blue" },
+    { title: "Admin Analytics", desc: "Comprehensive dashboards for hospital management to track KPIs and flow.", icon: BarChart3, color: "teal" }
+  ];
+
+  return (
+    <section id="features" className="section section-alt">
+      <FadeIn>
+        <div className="section-header">
+          <h2>Key Features</h2>
+          <p>Everything you need to run a modern, efficient hospital queue.</p>
+        </div>
+        <div className="grid-3">
+          {features.map((f, i) => (
+            <div key={i} className="card" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+               <div className={`icon-box icon-${f.color}`} style={{ flexShrink: 0, width: '48px', height: '48px', marginBottom: 0 }}>
+                 <f.icon size={24} />
+               </div>
+               <div>
+                 <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{f.title}</h4>
+                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{f.desc}</p>
+               </div>
+            </div>
+          ))}
+        </div>
+      </FadeIn>
+    </section>
+  );
+};
 
 const Footer = () => (
-  <footer style={{ padding: '6rem 10%', background: '#0a0f18', color: 'white' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4rem' }}>
-      <div className="nav-logo">
-        <Activity size={32} />
-        <span>MedSlot</span>
+  <footer className="footer">
+    <div className="footer-grid">
+      <div>
+        <div className="nav-logo" style={{ color: 'white', marginBottom: '1.5rem' }}>
+          <Activity size={24} /> NexusHealth
+        </div>
+        <p style={{ maxWidth: '300px' }}>
+          The leading enterprise SaaS for hospital queue management and patient flow optimization.
+        </p>
       </div>
-      <div style={{ display: 'flex', gap: '2rem' }}>
-        <span>Privacy</span>
-        <span>Terms</span>
-        <span>Contact</span>
+      <div>
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="#home">Home</a></li>
+          <li><a href="#about">About System</a></li>
+          <li><a href="#hospitals">Nearby Hospitals</a></li>
+          <li><a href="#features">Features</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Hospital Support</h4>
+        <ul>
+          <li><a href="#">Admin Portal</a></li>
+          <li><a href="#">Doctor Portal</a></li>
+          <li><a href="#">API Documentation</a></li>
+          <li><a href="#">Help Center</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact Us</h4>
+        <ul>
+          <li>support@nexushealth.com</li>
+          <li>+1 (800) 123-4567</li>
+          <li>123 Healthcare Blvd, MedCity</li>
+        </ul>
       </div>
     </div>
-    <div style={{ textAlign: 'center', marginTop: '4rem', opacity: 0.5, fontSize: '0.8rem' }}>
-      © 2026 MedSlot AI. Redefining the healthcare experience with immersive 3D technology.
+    <div className="footer-bottom">
+      &copy; {new Date().getFullYear()} NexusHealth SaaS Platform. All rights reserved. Professional Healthcare UI Design.
     </div>
   </footer>
 );
 
 export default function App() {
   const [loading, setLoading] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Ensure assets are loaded before showing the UI
-    const timer = setTimeout(() => setLoading(false), 2000);
+    const timer = setTimeout(() => setLoading(false), 800);
     return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div className="medslot-container">
+    <>
       <AnimatePresence>
         {loading && (
           <motion.div 
             exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 3000, background: '#0a0f18', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'var(--bg-main)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
           >
-            <motion.div 
-              animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              style={{ color: 'var(--primary-cyan)', filter: 'drop-shadow(0 0 20px rgba(0,212,255,0.5))' }}
-            >
-              <Activity size={100} />
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>
+              <Activity size={48} color="var(--primary-teal)" />
             </motion.div>
-            <h2 style={{ marginTop: '2rem', letterSpacing: '10px', fontWeight: '900', color: 'white', textShadow: '0 0 20px rgba(255,255,255,0.3)' }}>MEDSLOT</h2>
+            <h2 style={{ marginTop: '1.5rem', fontFamily: 'var(--font-heading)', fontWeight: '700', color: 'var(--text-main)' }}>NexusHealth</h2>
           </motion.div>
         )}
       </AnimatePresence>
 
       {!loading && (
-        <>
-          <Navbar />
+        <div style={{ minHeight: '100vh' }}>
+          <Navbar setShowLogin={setShowLogin} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
           <Hero />
-          <LiveQueueFlow />
-          <DoctorSection />
-          <PatientExperience />
-          <AIInsights />
+          <AboutSection />
+          <LiveQueueSection />
+          <NearbyHospitalsSection />
+          <HowItWorksSection />
+          <FeaturesSection />
           <Footer />
-        </>
+          <LoginModal show={showLogin} onClose={() => setShowLogin(false)} onLogin={() => setIsLoggedIn(true)} />
+        </div>
       )}
-    </div>
+    </>
   );
 }
